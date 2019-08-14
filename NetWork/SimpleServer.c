@@ -2,7 +2,11 @@
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <sys/types.h>
 #include <string.h>
+#include <errno.h>
+
+#define MAX_LEN 1024
 
 int CreateSocket(uint16_t port)
 {
@@ -38,8 +42,28 @@ int main()
 	uint16_t port = 54320;
 	int listen_fd = CreateSocket(port);
 
-	while (1) {
+	struct sockaddr_in cli_addr;
+	socklen_t cli_len = sizeof(cli_addr);
+	bzero(&cli_addr, cli_len);
 
+	const char *send_msg = "Hello, I had received your msg.";
+
+	printf("SimpleServer: begin accept:\n");
+	while (1) {
+		int conn_sock = accept(listen_fd, (struct sockaddr*)&cli_addr, &cli_len);
+		if (conn_sock < 0) {
+			printf("SimpleServer accept falied error[%d]\n", errno);
+		} else {
+			char cli_ip[16];
+			inet_ntop(AF_INET, &cli_addr.sin_addr, cli_ip, 16);
+			printf("SimpleServer: accept address[%s] port[%d]\n", cli_ip, ntohs(cli_addr.sin_port));
+			
+			char msg[MAX_LEN];
+			ssize_t recv_len = recv(conn_sock, msg, MAX_LEN, 0);
+			printf("Recv msg: %s, \nlen: %d\n", msg, recv_len);
+
+			send(conn_sock, send_msg, strlen(send_msg), 0);
+		}
 	}
 
 	exit(EXIT_SUCCESS);
