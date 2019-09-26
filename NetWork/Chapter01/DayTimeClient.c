@@ -1,7 +1,4 @@
 #include "../Util.h"
-#include <stdio.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
 
 int main(int argc, char *argv[])
 {
@@ -11,7 +8,7 @@ int main(int argc, char *argv[])
 
 	int sock_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (sock_fd < 0) {
-		ErrQuit("socket error");
+		ErrSys("socket error");
 	}
 
 	struct sockaddr_in serv_addr;
@@ -19,10 +16,10 @@ int main(int argc, char *argv[])
 	serv_addr.sin_family = AF_INET;
 	serv_addr.sin_port = htons(13);  // daytime server port 13
 	if (inet_pton(AF_INET, argv[1], &serv_addr.sin_addr) <= 0) {
-		ErrQuit("inet_pton error for %s", argv[1]);
+		ErrSys("inet_pton error for %s", argv[1]);
 	}
 	if (connect(sock_fd, (SA *)&serv_addr, sizeof(serv_addr)) < 0) {
-		ErrQuit("connect error");
+		ErrSys("connect error");
 	}
 
 	char recv_line[MAXLINE + 1];
@@ -30,11 +27,11 @@ int main(int argc, char *argv[])
 	while ((read_len = read(sock_fd, recv_line, MAXLINE)) > 0) {
 		recv_line[read_len] = 0;  //末尾结束null字符
 		if (fputs(recv_line, stdout) == EOF) {
-			ErrQuit("fputs error");
+			ErrSys("fputs error");
 		}
 	}
 	if (read_len < 0) {
-		ErrQuit("read error");
+		ErrSys("read error");
 	}
 	exit(0);
 }
