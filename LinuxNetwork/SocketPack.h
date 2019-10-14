@@ -96,4 +96,20 @@ void Listen(int sock_fd, int back_log)
 	}
 }
 
+int Accept(int sock_fd, struct sockaddr *addr, socklen_t *addr_len)
+{
+	int conn_fd = accept(sock_fd, addr, addr_len);
+	if (conn_fd < 0) {
+		ErrSys("accept error");
+	}
+	return conn_fd;
+}
+
+void Close(int fd)
+{
+	if (close(fd) < 0) {
+		ErrSys("close error");
+	}
+}
+
 #endif  //SOCKET_PACK_H
