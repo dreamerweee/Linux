@@ -112,4 +112,18 @@ void Close(int fd)
 	}
 }
 
+void Connect(int sock_fd, const struct sockaddr *serv_addr, socklen_t addr_len)
+{
+	if (connect(sock_fd, serv_addr, addr_len) < 0) {
+		ErrSys("connect error");
+	}
+}
+
+void Shutdown(int sock_fd, int howto)
+{
+	if (shutdown(sock_fd, howto) < 0) {
+		ErrSys("shutdown error");
+	}
+}
+
 #endif  //SOCKET_PACK_H
