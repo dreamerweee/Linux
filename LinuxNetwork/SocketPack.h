@@ -15,6 +15,7 @@
 #include <strings.h>
 #include <stdarg.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <errno.h>
 
 #define MAX_LINE_BUFF 1024
@@ -124,6 +125,15 @@ void Shutdown(int sock_fd, int howto)
 	if (shutdown(sock_fd, howto) < 0) {
 		ErrSys("shutdown error");
 	}
+}
+
+int SetNonblocking(int fd)
+{
+	int old_opt = fcntl(fd, F_GETFL);
+	if (fcntl(fd, F_SETFL, old_opt | O_NONBLOCK) < 0) {
+		ErrSys("fcntl error");
+	}
+	return old_opt;
 }
 
 #endif  //SOCKET_PACK_H
