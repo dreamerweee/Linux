@@ -20,6 +20,7 @@
 
 #define MAX_LINE_BUFF 1024
 #define SERV_PORT 5678  // 服务器监听端口
+#define MAX_EVENT_NUMBER 1024  // 事件最大值
 
 static void ErrPrint(int errno_flag, const char *fmt, va_list args)
 {
