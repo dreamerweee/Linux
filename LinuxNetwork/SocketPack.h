@@ -19,6 +19,7 @@
 #include <errno.h>
 
 #define MAX_LINE_BUFF 1024
+#define SERV_PORT 5678  // 服务器监听端口
 
 static void ErrPrint(int errno_flag, const char *fmt, va_list args)
 {
