@@ -188,7 +188,7 @@ int main(int argc, char *argv[])
 	int listen_fd = Socket(AF_INET, SOCK_STREAM, 0);
 	int on_reuseaddr = 1;
 	printf("on_reuseaddr sizeof: %d\n", sizeof(on_reuseaddr));
-	// setsockopt(listen_fd, SOL_SOCK, SO_REUSEADDR, &on_reuseaddr, sizeof(on_reuseaddr));
+	// setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &on_reuseaddr, sizeof(on_reuseaddr));
 	struct sockaddr_in serv_addr;
 	bzero(&serv_addr, sizeof(serv_addr));
 	serv_addr.sin_family = AF_INET;
