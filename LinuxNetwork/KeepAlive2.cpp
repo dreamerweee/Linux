@@ -1,5 +1,5 @@
 #include "SocketPack.h"
-#include "ListTimer.h"
+#include "TimeWheelTimer.h"
 #include <signal.h>
 #include <iostream>
 #include <sys/epoll.h>
@@ -12,10 +12,10 @@ using std::endl;
 */
 
 #define FD_LIMIT 65535
-#define TIME_SLOT 5
+#define TIME_SLOT 1
 
 static int gs_pipefd[2];
-static SortTimerList gs_timer_list;
+static TimeWheel gs_timer_list;
 static int gs_epoll_fd = 0;
 
 void AddFD(int epfd, int fd)
@@ -120,16 +120,12 @@ int main(int argc, char *argv[])
 				int conn_fd = Accept(listen_fd, (struct sockaddr *)&cli_addr, &cli_addr_len);
 				AddFD(epfd, conn_fd);
 				// 加入 gs_timer_list
-				users[conn_fd].cli_addr = cli_addr;
+				users[conn_fd].addr = cli_addr;
 				users[conn_fd].sock_fd = conn_fd;
-
-				UtilTimer *timer = new UtilTimer;
+				TimeWheelTimer *timer = gs_timer_list.AddTimer(15 * TIME_SLOT);
 				timer->m_user_data = &users[conn_fd];
-				timer->cb_func = CallBackFunc;
-				time_t cur = time(NULL);
-				timer->m_expire = cur + 3 * TIME_SLOT;
+				timer->m_callback = CallBackFunc;
 				users[conn_fd].timer = timer;
-				gs_timer_list.AddTimer(timer);
 			} else if ((sock_fd == gs_pipefd[0]) && events[i].events & EPOLLIN) {
 				int signo;
 				char signals[1024];
@@ -158,12 +154,12 @@ int main(int argc, char *argv[])
 					}
 				}
 			} else if (events[i].events & EPOLLIN) {
-				memset(users[sock_fd].buff, '\0', BUFFER_SIZE);
-				ret = recv(sock_fd, users[sock_fd].buff, BUFFER_SIZE - 1, 0);
+				memset(users[sock_fd].buffer, '\0', BUFFER_SIZE);
+				ret = recv(sock_fd, users[sock_fd].buffer, BUFFER_SIZE - 1, 0);
 				cout << "get " << ret << " bytes of client data " 
-					<< users[sock_fd].buff << " from " << sock_fd << endl;
+					<< users[sock_fd].buffer << " from " << sock_fd << endl;
 
-				UtilTimer *timer = users[sock_fd].timer;
+				TimeWheelTimer *timer = users[sock_fd].timer;
 				if (ret < 0) {
 					// 如果发送读错误，则关闭连接，并移除对应的定时器
 					if (errno != EAGAIN) {
@@ -181,10 +177,14 @@ int main(int argc, char *argv[])
 				} else {
 					// 如果某个客户连接上有数据可读，则我们需要调整该连接对应的定时器，以延迟该连接被关闭的时间
 					if (timer) {
-						time_t cur = time(NULL);
-						timer->m_expire = cur + 3 * TIME_SLOT;
+						// 增加新定时器
+						TimeWheelTimer *new_timer = gs_timer_list.AddTimer(15 * TIME_SLOT);
+						new_timer->m_user_data = &users[sock_fd];
+						new_timer->m_callback = CallBackFunc;
+						users[sock_fd].timer = new_timer;
+						// 删除老定时器
+						gs_timer_list.DelTimer(timer);
 						cout << "Adjust timer once" << endl;
-						gs_timer_list.AdjustTimer(timer);
 					}
 				}
 			}
