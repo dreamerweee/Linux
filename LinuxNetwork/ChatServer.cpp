@@ -136,7 +136,7 @@ int RunChild(int idx, ClientData *users, char *share_mem)
 					g_stop_child = true;
 				} else {
 					// 成功读取客户数据后就通知主进程（通过管道）来处理
-					send(pipe_fd, (char *)&idx, sizeof(idx), 0)
+					send(pipe_fd, (char *)&idx, sizeof(idx), 0);
 				}
 			} else if ((sock_fd == pipe_fd) && (events[i].events & EPOLLIN)) {
 				// 主进程通知本进程（通过管道）将第client个客户的数据发送到本进程负责的客户端
@@ -178,7 +178,7 @@ int main(int argc, char *argv[])
 
 	g_user_count = 0;
 	g_users = new ClientData[USER_LIMIT + 1];
-	g_sub_process = new int[PROCESS_LIMIT]
+	g_sub_process = new int[PROCESS_LIMIT];
 	for (int i = 0; i < PROCESS_LIMIT; ++i) {
 		g_sub_process[i] = -1;
 	}
@@ -258,11 +258,101 @@ int main(int argc, char *argv[])
 				pid_t pid = fork();
 				if (pid < 0) {
 					Close(conn_fd);
-					continue
+					continue;
 				} else if (pid == 0) {
-					
+					Close(g_epoll_fd);
+					Close(g_listen_fd);
+					Close(g_users[g_user_count].pipe_fd[0]);
+					Close(g_sig_pipe_fd[0]);
+					Close(g_sig_pipe_fd[1]);
+					RunChild(g_user_count, g_users, g_share_mem);
+					munmap((void *)g_share_mem, USER_LIMIT * BUFFER_SIZE);
+					exit(0);
+				} else {
+					Close(conn_fd);
+					Close(g_users[g_user_count].pipe_fd[1]);
+					AddFD(g_epoll_fd, g_users[g_user_count].pipe_fd[0]);
+					g_users[g_user_count].pid = pid;
+					// 记录新的客户连接在数组g_users中的索引值，建立进程pid和该索引值之间的映射关系
+					g_sub_process[pid] = g_user_count;
+					g_user_count++;
+				}
+			} else if ((sock_fd == g_sig_pipe_fd[0]) && (events[i].events & EPOLLIN)) {
+				// 处理信号事件
+				int signo;
+				char signals[1024];
+				ret = recv(sock_fd, signals, sizeof(signals), 0);
+				if (ret == -1) {
+					continue;
+				} else if (ret == 0) {
+					continue;
+				} else {
+					for (int i = 0; i < ret; ++i) {
+						switch (signals[i]) {
+							case SIGCHLD:  // 子进程退出，表示有某个客户端关闭了连接
+							{
+								pid_t pid;
+								int stat;
+								while ((pid = waitpid(-1, &stat, WNOHANG)) > 0) {
+									// 用子进程的pid取得被关闭的客户连接的编号
+									int del_user = g_sub_process[pid];
+									g_sub_process[pid] = -1;
+									if (del_user < 0 || del_user > USER_LIMIT) {
+										continue;
+									}
+									// 清除第del_user个客户连接使用的相关数据
+									epoll_ctl(g_epoll_fd, EPOLL_CTL_DEL, g_users[del_user].pipe_fd[0], 0);
+									Close(g_users[del_user].pipe_fd[0]);
+									g_users[del_user] = g_users[--g_user_count];
+									g_sub_process[g_users[del_user].pid] = del_user;
+								}
+								if (terminate && g_user_count == 0) {
+									stop_server = true;
+								}
+								break;
+							}
+							case SIGTERM:
+							case SIGINT:
+							{
+								// 接收服务器程序
+								printf("kill all the child now.\n");
+								if (g_user_count == 0) {
+									stop_server = true;
+									break;
+								}
+								for (int i = 0; i < g_user_count; ++i) {
+									int pid = g_users[i].pid;
+									kill(pid, SIGTERM);
+								}
+								terminate = true;
+								break;
+							}
+							default:
+								break;
+						}
+					}
+				}
+			} else if (events[i].events & EPOLLIN) {
+				// 某个子进程向父进程写入了数据
+				int child = 0;
+				// 读取管道数据，child变量记录了是哪个客户连接有数据到达
+				ret = recv(sock_fd, (char *)&child, sizeof(child), 0);
+				printf("read data from child accross pipe\n");
+				if (ret == -1 || ret == 0) {
+					continue;
+				} else {
+					// 向除负责处理第child个客户连接的子进程之外的其他子进程发送消息，通知它们有客户数据要写
+					for (int j = 0; j < g_user_count; ++j) {
+						if (g_users[j].pipe_fd[0] != sock_fd) {
+							printf("send data to child accross pipe\n");
+							send(g_users[j].pipe_fd[0], (char *)&child, sizeof(child), 0);
+						}
+					}
 				}
 			}
 		}
 	}
+
+	DelResource();
+	return 0;
 }
