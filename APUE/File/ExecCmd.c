@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
 			printf("waitpid error.\n");
 		}
 	}
-	perror("not find error");
 
 	return 0;
 }
+
