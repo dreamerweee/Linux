@@ -69,4 +69,12 @@ void Connect(int fd, void *addr, socklen_t addr_len)
     }
 }
 
+int SetNonblocking(int fd)
+{
+    int old_opt = fcntl(fd, F_GETFL);
+    int new_opt = old_opt | O_NONBLOCK;
+    fcntl(fd, F_SETFL, new_opt);
+    return old_opt;
+}
+
 #endif  // UTILS_H
