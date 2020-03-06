@@ -1,7 +1,7 @@
 #ifndef MESSAGE_H
 #define MESSAGE_H
 
-#include <stio.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <unistd.h>
@@ -12,7 +12,10 @@
 #include <arpa/inet.h>
 
 typedef struct {
-    char type;
-} PingMsg;
+    int type;
+} Message;
+
+#define MSG_PING        1
+#define MSG_PONG        2
 
 #endif  // MESSAGE_H

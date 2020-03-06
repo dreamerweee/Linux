@@ -77,4 +77,14 @@ int SetNonblocking(int fd)
     return old_opt;
 }
 
+void InitSocketAddr(struct sockaddr_in *addr, int domain, const char *ip, const char *port)
+{
+    addr->sin_family = domain;
+    addr->sin_port = htons(atoi(port));
+    if (inet_pton(domain, ip, &addr->sin_addr) != 1) {
+        perror("inet_pton");
+        exit(1);
+    }
+}
+
 #endif  // UTILS_H
