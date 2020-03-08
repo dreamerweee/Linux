@@ -79,6 +79,7 @@ int SetNonblocking(int fd)
 
 void InitSocketAddr(struct sockaddr_in *addr, int domain, const char *ip, const char *port)
 {
+    memset(addr, 0, sizeof(struct sockaddr_in));
     addr->sin_family = domain;
     addr->sin_port = htons(atoi(port));
     if (inet_pton(domain, ip, &addr->sin_addr) != 1) {
