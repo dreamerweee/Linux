@@ -18,7 +18,6 @@ int main(int argc, char *argv[])
   int conn_fd = Socket(AF_INET, SOCK_STREAM);
 
   struct sockaddr_in svr_addr;
-  memset(&svr_addr, 0, sizeof(svr_addr));
   InitSocketAddr(&svr_addr, AF_INET, argv[1], argv[2]);
 
   Connect(conn_fd, &svr_addr, sizeof(svr_addr));
@@ -76,6 +75,7 @@ int main(int argc, char *argv[])
       tv.tv_sec = KEEP_ALIVE_TIME;
     }
   }
+  close(conn_fd);
 
   return 0;
 }
