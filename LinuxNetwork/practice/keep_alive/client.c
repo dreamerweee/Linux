@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
     }
     // 超时时间到，心跳检测
     if (ret == 0) {
-      if (++heart_beats >= KEEP_ALIVE_PROBETIMES) {
+      if (++heart_beats > KEEP_ALIVE_PROBETIMES) {
         fprintf(stderr, "connect timeout close\n");
         break;
       }
