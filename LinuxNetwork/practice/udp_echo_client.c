@@ -46,6 +46,11 @@ int main(int argc, char *argv[])
     //     fputs("\n", stdout);
     // }
 
+    if (connect(sock_fd, (struct sockaddr *)&serv_addr, sizeof(serv_addr))) {
+        perror("connect");
+        exit(1);
+    }
+
     socklen_t serv_len = sizeof(serv_addr);
     char send_msg[1024], recv_msg[1024];
     socklen_t from_len;
